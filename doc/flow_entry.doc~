@@ -1,0 +1,168 @@
+REST API for Flow Rule PUT/DELETE 
+
+ OFURO can use REST API when you set flow rule for OFSW.
+OFURO REST API is easy.
+The construction of REST API is as follows.
+
+
+
+
+OpenFlow V1.3 Base (ryu/ryu/lib/ofctl_v1_3.py)
+
+[Elements for FLOW ENTRY] 
+    cookie = int(flow.get('cookie', 0))
+    cookie_mask = int(flow.get('cookie_mask', 0))
+    table_id = int(flow.get('table_id', 0))
+    idle_timeout = int(flow.get('idle_timeout', 0))
+    hard_timeout = int(flow.get('hard_timeout', 0))
+    priority = int(flow.get('priority', 0))
+    buffer_id = int(flow.get('buffer_id', dp.ofproto.OFP_NO_BUFFER))
+    out_port = int(flow.get('out_port', dp.ofproto.OFPP_ANY))
+    out_group = int(flow.get('out_group', dp.ofproto.OFPG_ANY))
+    flags = int(flow.get('flags', 0))
+    match = to_match(dp, flow.get('match', {}))
+    inst = to_actions(dp, flow.get('actions', []))
+
+
+[Dict Elements for 'match']
+    'in_port': int,
+    'in_phy_port': int,
+    'metadata': to_match_masked_int,
+    'dl_dst': to_match_eth,		#convert v1.0 
+    'dl_src': to_match_eth,		#convert v1.0 
+    'eth_dst': to_match_eth,
+    'eth_src': to_match_eth,
+    'dl_type': int,
+    'eth_type': int,
+    'dl_vlan': to_match_vid,		#convert v1.0 
+    'vlan_vid': to_match_vid,
+    'vlan_pcp': int,
+    'ip_dscp': int,
+    'ip_ecn': int,
+    'nw_proto': int,			#convert v1.0 
+    'ip_proto': int,
+    'nw_src': to_match_ip,		#convert v1.0 
+    'nw_dst': to_match_ip,		#convert v1.0 
+    'ipv4_src': to_match_ip,
+    'ipv4_dst': to_match_ip,
+    'tp_src': int,			#convert -> tcp_src
+    'tp_dst': int,			#convert -> tcp_dst
+    'tcp_src': int,
+    'tcp_dst': int,
+    'udp_src': int,
+    'sctp_src': int,
+    'sctp_dst': int,
+    'icmpv4_type': int,
+    'icmpv4_code': int,
+    'arp_op': int,
+    'arp_spa': to_match_ip,
+    'arp_tpa': to_match_ip,
+    'arp_sha': to_match_eth,
+    'arp_tha': to_match_eth,
+    'ipv6_src': to_match_ip,
+    'ipv6_dst': to_match_ip,
+    'ipv6_flabel': int,
+    'icmpv6_type': int,
+    'icmpv6_code': int,
+    'ipv6_nd_target': to_match_ip,
+    'ipv6_nd_sll': to_match_eth,
+    'ipv6_nd_tll': to_match_eth,
+    'mpls_label': int,
+    'mpls_tc': int,
+    'mpls_bos': int,
+    'pbb_isid': int,
+    'tunnel_id': int,
+    'ipv6_exthdr': to_match_masked_int}
+
+    convert v1.0 to v1.3
+           {'dl_dst': 'eth_dst',
+            'dl_src': 'eth_src',
+            'dl_type': 'eth_type',
+            'dl_vlan': 'vlan_vid',
+            'nw_src': 'ipv4_src',
+            'nw_dst': 'ipv4_dst',
+            'nw_proto': 'ip_proto'}
+
+    if attrs.get('dl_type') == ether.ETH_TYPE_ARP or \
+            attrs.get('eth_type') == ether.ETH_TYPE_ARP:
+        if 'nw_src' in attrs and 'arp_spa' not in attrs:
+            attrs['arp_spa'] = attrs['nw_src']
+            del attrs['nw_src']
+        if 'nw_dst' in attrs and 'arp_tpa' not in attrs:
+            attrs['arp_tpa'] = attrs['nw_dst']
+            del attrs['nw_dst']
+
+    kwargs = {}
+    for key, value in attrs.items():
+        if key in keys:
+            # For old field name
+            key = keys[key]
+        if key in convert:
+            value = convert[key](value)
+            if key == 'tp_src' or key == 'tp_dst':
+                # TCP/UDP port
+                conv = {inet.IPPROTO_TCP: {'tp_src': 'tcp_src',
+                                           'tp_dst': 'tcp_dst'},
+                        inet.IPPROTO_UDP: {'tp_src': 'udp_src',
+                                           'tp_dst': 'udp_dst'}}
+                ip_proto = attrs.get('nw_proto', attrs.get('ip_proto', 0))
+                key = conv[ip_proto][key]
+                kwargs[key] = value
+            else:
+                # others
+                kwargs[key] = value
+        else:
+            LOG.error('Unknown match field: %s', key)
+
+    return dp.ofproto_parser.OFPMatch(**kwargs)
+
+[List Elements for 'action']
+    type
+        GOTO_TABLE
+	    table_id [int]
+	WRITE_METADATA
+	    metadata
+	    metadata_mask
+	        default UINT64_MAX
+	METER
+	    meter_id [int]
+	OUTPUT
+	    port [int]
+	    	default:OFPP_ANY
+	    max_len [int]
+	    	default:OFCML_MAX
+	COPY_TTL_OUT
+	COPY_TTL_IN
+	SET_MPLS_TTL
+	    mpls_ttl [int]
+	DEC_MPLS_TTL
+	PUSH_VLAN
+	    ethertype [int]
+	POP_VLAN
+	PUSH_MPLS
+	    ethertype [int]
+	POP_MPLS
+	    ethertype [int]
+	SET_QUEUE
+	    queue_id [int]
+	GROUP
+	    group_id [int]
+	SET_NW_TTL
+	    nw_ttl [int]
+	DEC_NW_TTL
+	SET_FIELD
+	    field
+	    value
+	PUSH_PBB
+	    ethertype [int]
+	POP_PBB
+	    
+    port (ofproto_v1_3)
+	OFPP_NORMAL = 0xfffffffa        # Process with normal L2/L3 switching.
+	OFPP_FLOOD = 0xfffffffb         # All physical ports except input port and
+        	                        # those disabled by STP.
+	OFPP_ALL = 0xfffffffc           # All physical ports except input port.
+	OFPP_CONTROLLER = 0xfffffffd    # Send to controller.
+	OFPP_LOCAL = 0xfffffffe         # Local openflow "port".
+	OFPP_ANY = 0xffffffff           # Not associated with a physical port.
+

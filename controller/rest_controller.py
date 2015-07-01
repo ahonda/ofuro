@@ -58,7 +58,7 @@ class RestAPIController(ControllerBase):
             content_body = json.dumps(arp_addrs, indent=4)
             return wsgi.Response(status=200, body=content_body, headers=self.headers)
         except:
-            return wsgi.Response(status=500)
+            return wsgi.Response(status=400)
 
 
     @wsgi.route('ofuro_data', '/ofuro/{dpid}', methods=['GET'])
@@ -103,7 +103,8 @@ class RestAPIController(ControllerBase):
 
         except:
              logging.info('[** ARP ADD REQUEST ] No data')                                         
-             return wsgi.Response(status=500)
+             return wsgi.Response(status=400)
+
 
 
     @wsgi.route('arp_delete', '/arp/{dpid}', methods=['DELETE'])
@@ -126,4 +127,51 @@ class RestAPIController(ControllerBase):
             
         except:
             logging.info('[** ARP DELETE REQUEST ] No data')
-            return wsgi.Response(status=500)
+            return wsgi.Response(status=400)
+
+#####################################
+#  Flow Rule POST REQUEST
+#
+#  curl -X POST -d '{"priority":int, "table_id":int, "match":{dict},"action":[{dict},{dict}]' http://127.0.0.1:8080/flow/0000000000000001
+####################################
+
+    @wsgi.route('flow_add', '/flow/{dpid}', methods=['POST'])
+    def _add_static_flow(self, req, dpid, **kwargs):
+        dp_id = dpid_lib.str_to_dpid(dpid)
+        ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
+
+        new_entry =eval(req.body)
+
+        try:
+            ofsw.flow_ctl.static_flow_set(new_entry, flag=0)
+            flow_entry = ofctl_v1_3.get_flow_stats(ofsw.dpset, self.waiters, {})
+            content_body = json.dumps(flow_entry, indent=4)
+            return wsgi.Response(status=200, body=content_body, headers=self.headers)
+
+        except:
+             logging.info('[** FLOW ADD REQUEST ] bad data')                                         
+             return wsgi.Response(status=400)
+
+
+    @wsgi.route('flow_del', '/flow/{dpid}', methods=['DELETE'])
+    def _del_static_flow(self, req, dpid, **kwargs):
+        dp_id = dpid_lib.str_to_dpid(dpid)
+        ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
+
+        new_entry =eval(req.body)
+
+        try:
+            del_num = int(new_entry["number"])
+            print del_num
+        except:
+            del_num = 0
+
+        try:
+            ofsw.flow_ctl.static_flow_del(new_entry, del_num)
+            flow_entry = ofctl_v1_3.get_flow_stats(ofsw.dpset, self.waiters, {})
+            content_body = json.dumps(flow_entry, indent=4)
+            return wsgi.Response(status=200, body=content_body, headers=self.headers)
+
+        except:
+             logging.info('[** FLOW DELETE REQUEST ] bad data')                                         
+             return wsgi.Response(status=400)

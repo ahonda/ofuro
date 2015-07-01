@@ -3,6 +3,8 @@ import socket
 import ConfigParser
 import json
 
+import urllib2
+
 # For REST API
 
 from ryu.app import wsgi
@@ -24,6 +26,7 @@ from ryu.exception import OFPUnknownVersion
 
 from ryu.lib import dpid as dpid_lib
 from ryu.lib import ofctl_v1_3
+
 # -------------------------------
 
 from base.switch_base import Ofsw
@@ -31,15 +34,6 @@ from base.flowctl_base import FlowCtl
 
 from controller.rest_controller import RestAPIController
 
-
-# -------------------------------
-#
-# Event Set using among instans 
-#
-# -------------------------------                                                                                  
-
-#from lib.ipc.cast.switch import AddSwitchEvent
-#from lib.ipc.cast.switch import LeaveSwitchEvent
 
 ofuro_instance_name = 'ofuro_app'
 
@@ -96,20 +90,24 @@ class OFURO_APP(app_manager.RyuApp):
     def stats_reply_handler(self, ev):
         msg = ev.msg
         dp = msg.datapath
- 
+
         if dp.id not in self.waiters:
             return
- 
+
+        self._OFSW_LIST[dp.id].flow_ctl.now_flows = ev.msg.body
+
         if msg.xid not in self.waiters[dp.id]:
             return
  
         lock, msgs = self.waiters[dp.id][msg.xid]
+
         msgs.append(msg)
- 
+
         flags = dp.ofproto.OFPMPF_REPLY_MORE
- 
+
         if msg.flags & flags:
             return
+
         del self.waiters[dp.id][msg.xid]
         lock.set()
 
@@ -146,7 +144,6 @@ class OFURO_APP(app_manager.RyuApp):
                          ofsw.port_data[port].port_no, ofsw.port_data[port].mac, extra=ofsw.sw_id)
 
         ofsw.flow_ctl.arp_packet_in_flow(arp_data={}, flag=0)
-
  
     def unregister_ofsw(self, dp):
         if dp.id in self._OFSW_LIST:
@@ -157,7 +154,7 @@ class OFURO_APP(app_manager.RyuApp):
 
 
 def OFURO_APP_Data():
-        f = open('ofuro.json','r')
-        Ofuro_Data = json.load(f)
-        f.close()
-        return Ofuro_Data
+    f = open('ofuro.json','r')
+    Ofuro_Data = json.load(f)
+    f.close()
+    return Ofuro_Data
