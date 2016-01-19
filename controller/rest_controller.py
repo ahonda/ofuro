@@ -9,6 +9,8 @@ from ryu.app.wsgi import ControllerBase
 from ryu.lib import dpid as dpid_lib
 from ryu.lib import ofctl_v1_3
 
+from function.nat import Nat_Ready, Nat_Flow_Del
+
 ofuro_instance_name = 'ofuro_app'
 
 class RestAPIController(ControllerBase):
@@ -129,22 +131,26 @@ class RestAPIController(ControllerBase):
             logging.info('[** ARP DELETE REQUEST ] No data')
             return wsgi.Response(status=400)
 
-#####################################
-#  Flow Rule POST REQUEST
-#
-#  curl -X POST -d '{"priority":int, "table_id":int, "match":{dict},"action":[{dict},{dict}]' http://127.0.0.1:8080/flow/0000000000000001
-####################################
 
-    @wsgi.route('flow_add', '/flow/{dpid}', methods=['POST'])
-    def _add_static_flow(self, req, dpid, **kwargs):
+#####################################
+#  NAT Rule POST REQUEST
+#
+#  curl -X POST -d '{"a_ip":"192.168.x.x", "z_ip":"192.168.y.y" http://127.0.0.1:8080/nat/0000000000000001
+####################################      
+
+
+    @wsgi.route('nat_add', '/nat/{dpid}', methods=['POST'])
+    def _add_nat_flow(self, req, dpid, **kwargs):
         dp_id = dpid_lib.str_to_dpid(dpid)
         ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
 
-        new_entry =eval(req.body)
+        new_nat_entry =eval(req.body)
 
         try:
-            ofsw.flow_ctl.static_flow_set(new_entry, flag=0)
+#            logging.info('******** NAT ******* > %s', new_nat_entry)
+            Nat_Ready(ofsw, new_nat_entry)
             flow_entry = ofctl_v1_3.get_flow_stats(ofsw.dpset, self.waiters, {})
+
             content_body = json.dumps(flow_entry, indent=4)
             return wsgi.Response(status=200, body=content_body, headers=self.headers)
 
@@ -153,25 +159,21 @@ class RestAPIController(ControllerBase):
              return wsgi.Response(status=400)
 
 
-    @wsgi.route('flow_del', '/flow/{dpid}', methods=['DELETE'])
-    def _del_static_flow(self, req, dpid, **kwargs):
+    @wsgi.route('nat_del', '/nat/{dpid}', methods=['DELETE'])
+    def _del_nat_flow(self, req, dpid, **kwargs):
         dp_id = dpid_lib.str_to_dpid(dpid)
         ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
 
-        new_entry =eval(req.body)
+        del_nat_entry =eval(req.body)
 
         try:
-            del_num = int(new_entry["number"])
-            print del_num
-        except:
-            del_num = 0
-
-        try:
-            ofsw.flow_ctl.static_flow_del(new_entry, del_num)
+            Nat_Flow_Del(ofsw, del_nat_entry)
             flow_entry = ofctl_v1_3.get_flow_stats(ofsw.dpset, self.waiters, {})
+
             content_body = json.dumps(flow_entry, indent=4)
             return wsgi.Response(status=200, body=content_body, headers=self.headers)
 
         except:
-             logging.info('[** FLOW DELETE REQUEST ] bad data')                                         
+             logging.info('[** FLOW ADD REQUEST ] bad data')                                         
              return wsgi.Response(status=400)
+

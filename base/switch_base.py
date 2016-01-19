@@ -11,21 +11,22 @@ from ryu.controller import dpset
 from ryu.lib import dpid as dpid_lib
 
 from base.flowctl_base import FlowCtl
-from base.pktctl_base import PktCtl
-
+from base.ofuro_data_base import OfuroData
 
 class Ofsw(dict):
-    def __init__(self, dp, ofuro_set, logger):
+    def __init__(self, dp, logger):
         super(Ofsw, self).__init__()
         self.dpset    =  dp
         self.dpid_str =  dpid_lib.dpid_to_str(dp.id)
         self.sw_id    =  {'sw_id': self.dpid_str}
-        self.ofuro_set = ofuro_set
         self.logger   =  logger
-
+        
         self.port_data =  PortData(self.dpset.ports)
-        self.flow_ctl  =  FlowCtl(self.dpset, self.ofuro_set)
-        self.pkt_ctl   =  PktCtl(self.dpset, self.port_data, self.logger)
+        self.ofuro_data  =  OfuroData(self.dpset)
+
+        self.flow_ctl  =  FlowCtl(self.dpset)
+
+        self.client = {}
 
 class PortData(dict):
     def __init__(self, ports):

@@ -30,8 +30,9 @@ from ryu.lib import ofctl_v1_3
 # -------------------------------
 
 from base.switch_base import Ofsw
-from base.flowctl_base import FlowCtl
 
+from function.packet_in import Packet_In_Handler
+from function.nat import Nat_Ready
 from controller.rest_controller import RestAPIController
 
 
@@ -118,19 +119,19 @@ class OFURO_APP(app_manager.RyuApp):
         dp_id = ev.msg.datapath.id
         if dp_id in self._OFSW_LIST:
             ofsw = self._OFSW_LIST[dp_id]
-            ofsw.pkt_ctl.packet_in_handler(ev.msg)
+            Packet_In_Handler(ofsw, ev.msg)
 
 
     def register_ofsw(self, dp):
         dpid = {'sw_id': dpid_lib.dpid_to_str(dp.id)}
 
-        default_ofuro_set = { "ARP": {}}
+        default_ofuro_set = { "ARP": {}, "NAT":[]}
 
         if dpid["sw_id"] in self.ofuro_data:
             default_ofuro_set = self.ofuro_data[dpid["sw_id"]]
 
         try:
-            ofsw = Ofsw(dp, default_ofuro_set, self._LOGGER)
+            ofsw = Ofsw(dp, self._LOGGER)
         except OFPUnknownVersion as message:
             self._LOGGER.error(str(message), extra=dpid)
             return
@@ -141,10 +142,11 @@ class OFURO_APP(app_manager.RyuApp):
 
         for port in ofsw.port_data:
             self.logger.info('       [PORT NO] %s [MAC ADDRESS] %s',
-                         ofsw.port_data[port].port_no, ofsw.port_data[port].mac, extra=ofsw.sw_id)
+                    ofsw.port_data[port].port_no, ofsw.port_data[port].mac, extra=ofsw.sw_id)
 
-        ofsw.flow_ctl.arp_packet_in_flow(arp_data={}, flag=0)
- 
+        Nat_Ready(ofsw, default_ofuro_set["NAT"])
+
+        
     def unregister_ofsw(self, dp):
         if dp.id in self._OFSW_LIST:
             del self._OFSW_LIST[dp.id]
