@@ -4,6 +4,8 @@ from lib.proto.pkt_proto import *
 from ryu.ofproto         import ofproto_v1_3
 from ryu.lib import mac as mac_lib
 from function.packet_out import Send_Packet_Out
+from function.flow_record import Write_Record
+
 
 def Arp_Reply(ofsw, msg, header_list):
 
@@ -73,9 +75,9 @@ def Arp_Reply(ofsw, msg, header_list):
 
 
             if find_flag == 1:
-                logging.info( ">>>> SET NAT FLOW >>>> %s",  nat_flow)
+                logging.info( "   >>>> SET NAT FLOW ")
                 ofsw.flow_ctl.set_flow(nat_flow,0)
-
+                
 
 
 def Arp_Request(ofsw, src_ip, dst_ip, in_port=None):

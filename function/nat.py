@@ -1,4 +1,5 @@
 import logging
+import json
 
 from lib.proto.pkt_proto import *
 
@@ -10,39 +11,32 @@ from lib.proto.pkt_proto import *
 
 from ryu.lib import dpid as dpid_lib
 from function.arp import Arp_Flow, Arp_Request
+from function.flow_record import Write_Record
 
 
 def Nat_Ready(ofsw, ofuro_nat_set):
 
         logging.info('+++++++++++++++ NAT FLOW SET Starting +++++++++++++++')
 
-#        for nat_entry in ofuro_nat_set:
-
-#            for k, v in nat_entry.items(): 
-#                if v == "":
-#                    logging.info('     ======= NAT ENTRY [%s] NO DATA ======', k)
-#                    logging.info('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
-#                    return
-
         nat_set = []
 
         for nat_entry in ofuro_nat_set:
             nat_part = {}
+            logging.info("NAT ENTRY >> %s ", nat_entry)
 
-            for item_k, item_v in nat_entry.items():
 
-                if item_v == "":
-
-                    logging.info('     ======= NAT ENTRY [%s] NO DATA ======', k)
-                    logging.info('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
-                    return
+            if nat_entry["SW_IP"] == "" or nat_entry["SW_PORT"] == "" or nat_entry["CLIENT_IP"] == "":
+                logging.info('     ======= NAT ENTRY [%s] NO DATA ======')
+                logging.info('+++++++++++++++++++++++++++++++++++++++++++++++++++++')
+                return
                 
-                nat_part.update({item_k:item_v})
+            nat_part.update({"SW_IP":nat_entry["SW_IP"]})
+            nat_part.update({"SW_PORT":nat_entry["SW_PORT"]})
+            nat_part.update({"CLIENT_IP":nat_entry["CLIENT_IP"]})
 
+        
 
             arp_data = {nat_part["SW_IP"] : nat_part["SW_PORT"] }
-
-            logging.info("   [ARP DATA] --> %s ", arp_data)
 
             # Packet In Flow Set For ARP Packet 
             Arp_Flow(ofsw, arp_data, FLAG=0)
@@ -51,12 +45,12 @@ def Nat_Ready(ofsw, ofuro_nat_set):
             nat_set.append(nat_part)
         
         ofsw.ofuro_data.nat_entry.append(nat_set)
-        logging.info("**** [NAT DATA] --> %s ", ofsw.ofuro_data.nat_entry)
 
         # Find Client MAC Address
         for arp_req in nat_set:
             Arp_Request(ofsw, arp_req["SW_IP"],  arp_req["CLIENT_IP"],  arp_req["SW_PORT"])
 
+        Write_Record(ofsw, 0)
 
 
 def Nat_Flow_Del(ofsw, del_nat_set):
@@ -72,21 +66,16 @@ def Nat_Flow_Del(ofsw, del_nat_set):
         del_clip.append(del_entry["CLIENT_IP"])
 
 
-    logging.info("[PORT] %s [SW_IP] %s [CL_IP] %s", del_port, del_swip, del_clip)
-
-
     find_flag = 0
 
-    for nat_entry in ofsw.ofuro_data.nat_entry:
-
-        if find_flag == 2:
-             break
+    for entry_index, nat_entry in enumerate(ofsw.ofuro_data.nat_entry):
 
         for nat_data in nat_entry:
+                
             now_swip = nat_data["SW_IP"]
 
             if now_swip in del_swip:
-
+                
                 nat_flow = {
                     'match': {'eth_type': ether.ETH_TYPE_IP}
                 }
@@ -106,7 +95,14 @@ def Nat_Flow_Del(ofsw, del_nat_set):
 
                 find_flag = find_flag + 1
 
-                logging.info("[DELETE NAT FLOW] %s", nat_flow)
                 ofsw.flow_ctl.delete_flow(nat_flow)
-                logging.info("[DELETE ARP FLOW] %s", arp_flow)
                 ofsw.flow_ctl.delete_flow(arp_flow)
+
+                if find_flag == 2:
+                    logging.info("[find] %s", ofsw.ofuro_data.nat_entry)
+
+                    del ofsw.ofuro_data.nat_entry[entry_index]
+                    logging.info("[find] %s", ofsw.ofuro_data.nat_entry)
+
+                    Write_Record(ofsw, 0)
+                    return

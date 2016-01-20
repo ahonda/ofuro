@@ -33,6 +33,7 @@ from base.switch_base import Ofsw
 
 from function.packet_in import Packet_In_Handler
 from function.nat import Nat_Ready
+from function.flow_record import Read_Record
 from controller.rest_controller import RestAPIController
 
 
@@ -125,11 +126,6 @@ class OFURO_APP(app_manager.RyuApp):
     def register_ofsw(self, dp):
         dpid = {'sw_id': dpid_lib.dpid_to_str(dp.id)}
 
-        default_ofuro_set = { "ARP": {}, "NAT":[]}
-
-        if dpid["sw_id"] in self.ofuro_data:
-            default_ofuro_set = self.ofuro_data[dpid["sw_id"]]
-
         try:
             ofsw = Ofsw(dp, self._LOGGER)
         except OFPUnknownVersion as message:
@@ -144,7 +140,20 @@ class OFURO_APP(app_manager.RyuApp):
             self.logger.info('       [PORT NO] %s [MAC ADDRESS] %s',
                     ofsw.port_data[port].port_no, ofsw.port_data[port].mac, extra=ofsw.sw_id)
 
-        Nat_Ready(ofsw, default_ofuro_set["NAT"])
+        # DELETE ALL FLOW for Joined SW
+        ofsw.flow_ctl.delete_flow()
+
+#        default_ofuro_set = { "ARP": {}, "NAT":[]}
+        
+#        if dpid["sw_id"] in self.ofuro_data:
+#            default_ofuro_set = self.ofuro_data[dpid["sw_id"]]
+
+        dump_data = Read_Record(ofsw, 0)
+
+        for nat_entry in dump_data:
+            self.logger.info('[ENTRY] %s',nat_entry, extra=ofsw.sw_id)
+
+            Nat_Ready(ofsw, nat_entry)
 
         
     def unregister_ofsw(self, dp):

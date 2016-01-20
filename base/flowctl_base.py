@@ -19,9 +19,10 @@ class FlowCtl(object):
 
         self.dp = dp
 
-    def set_flow(self, flow, e_type):
+    def set_flow(self, flow={}, e_type=0):
 
         dpid = dpid_lib.dpid_to_str(self.dp.id)
+        logging.info("Flow SET!!")
 
         try:
             ofctl_v1_3.mod_flow_entry(self.dp, flow, ofproto_v1_3.OFPFC_ADD)
@@ -29,10 +30,11 @@ class FlowCtl(object):
         except:
             return
 
-    def delete_flow(self, flow, e_num=0):
+    def delete_flow(self, flow={}, e_num=0):
 
         dpid = dpid_lib.dpid_to_str(self.dp.id)
 #        del_flow = File_Delete_Flow(dpid, flow, e_num)
 
-        if flow != "{}":
-            ofctl_v1_3.mod_flow_entry(self.dp, flow, ofproto_v1_3.OFPFC_DELETE)
+        logging.info("Flow DELETE!!")
+
+        ofctl_v1_3.mod_flow_entry(self.dp, flow, ofproto_v1_3.OFPFC_DELETE)

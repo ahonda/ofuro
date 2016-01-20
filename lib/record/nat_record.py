@@ -65,7 +65,6 @@ def Check_File(dpid, entry, e_num=0)  :
 
     recdir = "./record/" + dpid + "/"
     s_file = recdir + "static_flow.json"
-    a_file = recdir + "active_flow.json"
 
     print recdir
 
@@ -99,3 +98,4 @@ def Check_File(dpid, entry, e_num=0)  :
 
             f.close()
             return [flag, line_num, num, c]
+

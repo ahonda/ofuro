@@ -5,10 +5,7 @@ def File_Write_Flow(dpid, entry, e_type=0):
     recdir = "./record/" + dpid + "/"
     s_file = recdir + "static_flow.json"
 
-    if e_type == 0: e_type = "static"
-    elif e_type == 1: e_type = "arp"
-
-    ret_flag, line_num, ret_num, ret_entry = Check_File(dpid, entry)
+    ret_flag, line_num, ret_num, ret_entry = Check_File(dpid, entry, e_type)
 
     if ret_flag == -1:
         f = open(s_file, 'w')
@@ -64,7 +61,11 @@ def Check_File(dpid, entry, e_num=0)  :
     rstr = ""
 
     recdir = "./record/" + dpid + "/"
-    s_file = recdir + "static_flow.json"
+
+    if e_num == 0:
+        s_file = recdir + "nat.json"
+    elif e_num == 1:
+        s_file = recdir + "arp.json"
 
     print recdir
 
