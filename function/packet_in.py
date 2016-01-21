@@ -8,6 +8,7 @@ from lib.proto.pkt_proto import *
 #                        
 # -------------------------------
 
+from function.nat import Nat_Flow_Add
 from function.arp import Arp_Reply
 
 def Packet_In_Handler(ofsw, msg):
@@ -23,7 +24,9 @@ def Packet_In_Handler(ofsw, msg):
     if ARP in header_list:
 #        logging.info('[APR]  <in port>%s <keys> %s',
 #                         in_port, header_list, extra=ofsw.sw_id)
-        Arp_Reply(ofsw, msg, header_list)
+        retcode, arp_pkt_set  = Arp_Reply(ofsw, msg, header_list)
+        if retcode == "REP":
+            Nat_Flow_Add(ofsw, arp_pkt_set)
         return
 
     if ICMP in header_list:

@@ -33,7 +33,7 @@ from base.switch_base import Ofsw
 
 from function.packet_in import Packet_In_Handler
 from function.nat import Nat_Ready
-from function.flow_record import Read_Record
+from function.record import Read_Record
 from controller.rest_controller import RestAPIController
 
 
@@ -57,7 +57,6 @@ class OFURO_APP(app_manager.RyuApp):
 
         # logger configure
         self.set_logger(self.logger)
-        self.ofuro_data = OFURO_APP_Data()
 
         self.waiters = {}
 
@@ -142,16 +141,10 @@ class OFURO_APP(app_manager.RyuApp):
 
         # DELETE ALL FLOW for Joined SW
         ofsw.flow_ctl.delete_flow()
-
-#        default_ofuro_set = { "ARP": {}, "NAT":[]}
-        
-#        if dpid["sw_id"] in self.ofuro_data:
-#            default_ofuro_set = self.ofuro_data[dpid["sw_id"]]
-
         dump_data = Read_Record(ofsw, 0)
 
         for nat_entry in dump_data:
-            self.logger.info('[ENTRY] %s',nat_entry, extra=ofsw.sw_id)
+            self.logger.info('[NAT ENTRY RESTORE]', extra=ofsw.sw_id)
 
             Nat_Ready(ofsw, nat_entry)
 
@@ -162,10 +155,3 @@ class OFURO_APP(app_manager.RyuApp):
 
             dpid = {'sw_id': dpid_lib.dpid_to_str(dp.id)}
             self._LOGGER.info('[OFSW] Leave OpenFlow SW !!', extra=dpid)
-
-
-def OFURO_APP_Data():
-    f = open('ofuro.json','r')
-    Ofuro_Data = json.load(f)
-    f.close()
-    return Ofuro_Data

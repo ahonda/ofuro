@@ -1,10 +1,11 @@
 import logging
+import json
 
 from lib.proto.pkt_proto import *
 from ryu.ofproto         import ofproto_v1_3
 from ryu.lib import mac as mac_lib
 from function.packet_out import Send_Packet_Out
-from function.flow_record import Write_Record
+from function.record import Read_Record, Write_Record
 
 
 def Arp_Reply(ofsw, msg, header_list):
@@ -15,6 +16,7 @@ def Arp_Reply(ofsw, msg, header_list):
     dst_ip = header_list[ARP].dst_ip
     srcip = ip_addr_ntoa(src_ip)
     dstip = ip_addr_ntoa(dst_ip)
+    arp_pkt_set = {}
 
     if src_ip == dst_ip:
     # GARP -> packet forward (normal)
@@ -22,6 +24,8 @@ def Arp_Reply(ofsw, msg, header_list):
         Send_Packet_Out(in_port, output, msg.data)
         self.logging.info('Receive GARP from [%s].', srcip)
         self.logging.info('Send GARP (normal).')
+
+        retcode = "GARP"
 
     else:
         if header_list[ARP].opcode == arp.ARP_REQUEST:
@@ -33,55 +37,31 @@ def Arp_Reply(ofsw, msg, header_list):
 
             Send_Arp(ofsw, arp.ARP_REPLY,dst_mac, src_mac, dst_ip, src_ip, arp_target_mac, in_port, output)
 
-            log_msg = '[ARP REQUEST] from [IP %s : MAC %s] to [port %s : IP %s]'
-            logging.info(log_msg, srcip, src_mac, in_port, dstip, extra=ofsw.sw_id)
-#            logging.info('Send ARP reply to [%s]', srcip,
-#                             extra=ofsw.sw_id)
+#            log_msg = '[ARP REQUEST] from [IP %s : MAC %s] to [port %s : IP %s]'
+#            logging.info(log_msg, srcip, src_mac, in_port, dstip, extra=ofsw.sw_id)
+
+            retcode = "REQ"
 
         elif header_list[ARP].opcode == arp.ARP_REPLY:
+
             src_mac = header_list[ARP].src_mac
             dst_mac = header_list[ARP].dst_mac
 
-            #  ARP reply to router port -> suspend packets forward
-            find_flag = 0
+            log_msg = '[ARP REPLY from CLIENT] IP %s : MAC %s PORT %s'
+            logging.info(log_msg, srcip, src_mac, in_port, extra=ofsw.sw_id)
 
-            for nat_entry in ofsw.ofuro_data.nat_entry:
-
-                nat_flow = {
-                    'priority' : PRIORITY_IP_HANDLING,
-                    'match': {'eth_type': ether.ETH_TYPE_IP},
-                    'actions': []
-                }
-
-                if find_flag == 1:
-                    break
-
-                for nat_data in nat_entry:
-                    if nat_data["CLIENT_IP"] == src_ip and nat_data["SW_IP"] == dst_ip:
-                        nat_data["CLIENT_MAC"] = src_mac
-
-                        nat_flow["actions"].append({"type": "SET_FIELD", "field": "eth_src","value": ofsw.port_data[nat_data["SW_PORT"]].mac })
-                        nat_flow["actions"].append({"type": "SET_FIELD", "field": "eth_dst","value": nat_data["CLIENT_MAC"] })
-                        nat_flow["actions"].append({"type": "SET_FIELD", "field": "ipv4_src","value": nat_data["SW_IP"] })
-                        nat_flow["actions"].append({"type": "SET_FIELD", "field": "ipv4_dst","value": nat_data["CLIENT_IP"] })
-                        nat_flow["actions"].append({"type": "OUTPUT", "port": nat_data["SW_PORT"] })
-
-                        find_flag = 1
-
-                    else:
-                        nat_flow["match"].update({"ipv4_dst": nat_data["SW_IP"]})
-                        nat_flow["match"].update({"ipv4_src": nat_data["CLIENT_IP"]})
-                        nat_flow["match"].update({"in_port" : nat_data["SW_PORT"]})
+            arp_pkt_set.update({"SRC_IP": srcip})
+            arp_pkt_set.update({"DST_IP": dstip})
+            arp_pkt_set.update({"SRC_MAC": src_mac})
+            arp_pkt_set.update({"DST_MAC": dst_mac})
 
 
-            if find_flag == 1:
-                logging.info( "   >>>> SET NAT FLOW ")
-                ofsw.flow_ctl.set_flow(nat_flow,0)
-                
+            retcode = "REP"
+
+    return retcode, arp_pkt_set
 
 
 def Arp_Request(ofsw, src_ip, dst_ip, in_port=None):
-
         src_mac = ofsw.port_data[in_port].mac
         dst_mac = mac_lib.BROADCAST_STR
         arp_target_mac = mac_lib.DONTCARE_STR
@@ -114,7 +94,6 @@ def Send_Arp(ofsw, arp_opcode, src_mac, dst_mac,
 
 
 def Arp_Flow(ofsw, arp_data, FLAG):
-
     flow_entry = {
         'priority' : PRIORITY_ARP_HANDLING ,
         'match': {
@@ -137,8 +116,10 @@ def Arp_Flow(ofsw, arp_data, FLAG):
             flow_entry["match"].update({"in_port": arp_port })
 
         if FLAG == 0:
+            logging.info("  [ SET ARP Packet In]  IP: %s PORT: %s", arp_key, arp_port)
             ofsw.flow_ctl.set_flow(flow_entry, 0)
         else:
+            logging.info("  [ DELETE ARP Packet In]  IP: %s PORT: %s", arp_key, arp_port)
             ofsw.flow_ctl.delete_flow(flow_entry)
             
 

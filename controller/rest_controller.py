@@ -155,6 +155,22 @@ class RestAPIController(ControllerBase):
 #
 #  curl -X POST -d '{"a_ip":"192.168.x.x", "z_ip":"192.168.y.y" http://127.0.0.1:8080/nat/0000000000000001
 ####################################      
+    @wsgi.route('nat_get', '/nat/{dpid}', methods=['GET'])
+    def _get_nat_entry(self, req, dpid, **kwargs):
+
+        logging.info('[REST_API : NAT ENTRY DELETE]  Calling')                                         
+
+        dp_id = dpid_lib.str_to_dpid(dpid)
+
+        if dp_id in  self.ofuro_spp._OFSW_LIST.keys():
+            ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
+        else:
+            logging.info('<*** ERROR ***>  OFSW Not Found')                                         
+            return wsgi.Response(status=400)
+
+        nat_entry =  ofsw.ofuro_data.nat_entry
+        content_body = json.dumps(nat_entry, indent=4)
+        return wsgi.Response(status=200, body=content_body, headers=self.headers)
 
 
     @wsgi.route('nat_add', '/nat/{dpid}', methods=['POST'])
