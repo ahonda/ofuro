@@ -24,10 +24,10 @@ def check_record_file(ofsw, e_type):
 
     if   e_type == 0:
         file_name = "nat.json"
-        dump_data = ofsw.ofuro_data.nat_entry
+        dump_data = ofsw.ofuro_data.NatEntry
     elif e_type == 1:
         file_name = "arp.json"
-        dump_data = ofsw.ofuro_data.arp_entry
+        dump_data = ofsw.ofuro_data.ArpEntry
 
     recdir = "./record/" + ofsw.dpid_str + "/"
     path = recdir + file_name

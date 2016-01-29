@@ -54,9 +54,8 @@ def Arp_Reply(ofsw, msg, header_list):
             arp_pkt_set.update({"DST_IP": dstip})
             arp_pkt_set.update({"SRC_MAC": src_mac})
             arp_pkt_set.update({"DST_MAC": dst_mac})
-
-
             retcode = "REP"
+
 
     return retcode, arp_pkt_set
 

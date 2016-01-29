@@ -141,12 +141,12 @@ class OFURO_APP(app_manager.RyuApp):
 
         # DELETE ALL FLOW for Joined SW
         ofsw.flow_ctl.delete_flow()
-        dump_data = Read_Record(ofsw, 0)
+        ofsw.ofuro_data.NatEntry = Read_Record(ofsw, 0)
 
-        for nat_entry in dump_data:
+        for store_uuid, store_entry in ofsw.ofuro_data.NatEntry.items():
             self.logger.info('[NAT ENTRY RESTORE]', extra=ofsw.sw_id)
 
-            Nat_Ready(ofsw, nat_entry)
+            Nat_Ready(ofsw, store_entry["ENTRY"], flag=1)
 
         
     def unregister_ofsw(self, dp):

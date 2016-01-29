@@ -17,6 +17,16 @@ class OfuroData(object):
     def __init__(self, dp):
 
         self.dp = dp
-        self.nat_entry = []
-        self.arp_entry = []
 
+        self.NatEntry = {}
+        self.ArpEntry = {}
+
+
+    def get_nat_entry(self, uuid=""):
+        if uuid == "":
+            logging.info('[ALL NAT ENTRY RETURN]')
+            return self.NatEntry
+
+        else:
+             ret_entry = {uuid: self.NatEntry.get(uuid, None)}
+             return ret_entry
