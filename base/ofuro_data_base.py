@@ -1,4 +1,5 @@
 import logging
+import json
 
 from lib.proto.pkt_proto import *
 
@@ -23,10 +24,40 @@ class OfuroData(object):
 
 
     def get_nat_entry(self, uuid=""):
+
+        ret_entry = {}
+        all_entry =[]
+
         if uuid == "":
+
             logging.info('[ALL NAT ENTRY RETURN]')
-            return self.NatEntry
+
+            for nat_uuid, nat_entry in self.NatEntry.items():
+
+                ret_entry.update({"NAT_ID":nat_uuid})
+
+                for entry_key, entry_data in nat_entry.items():
+                    ret_entry.update({entry_key:entry_data})
+
+                all_entry.append(ret_entry)
+
+        elif self.NatEntry.has_key(uuid) == True:
+             ret_entry.update({"NAT_ID":uuid})
+             for entry_key, entry_data in self.NatEntry[uuid].items():
+                 ret_entry.update({entry_key:entry_data})
+
+             all_entry.append(ret_entry)
+
+        return all_entry
+
+
+    def get_arp_entry(self, uuid=""):
+        if uuid == "":
+            logging.info('[ALL ARP ENTRY RETURN]')
+            return self.ArpEntry
 
         else:
-             ret_entry = {uuid: self.NatEntry.get(uuid, None)}
+             ret_entry = {uuid: self.ArpEntry.get(uuid, None)}
              return ret_entry
+
+

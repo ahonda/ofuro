@@ -2,6 +2,7 @@ import logging
 import socket
 import ConfigParser
 import json
+import time
 
 import urllib2
 
@@ -33,6 +34,7 @@ from base.switch_base import Ofsw
 
 from function.packet_in import Packet_In_Handler
 from function.nat import Nat_Ready
+from function.arp import Arp_Flow
 from function.record import Read_Record
 from controller.rest_controller import RestAPIController
 
@@ -141,12 +143,22 @@ class OFURO_APP(app_manager.RyuApp):
 
         # DELETE ALL FLOW for Joined SW
         ofsw.flow_ctl.delete_flow()
-        ofsw.ofuro_data.NatEntry = Read_Record(ofsw, 0)
 
-        for store_uuid, store_entry in ofsw.ofuro_data.NatEntry.items():
+        # save data set
+        ofsw.ofuro_data.ArpEntry = Read_Record(ofsw, 1) # 1 = ARP
+
+        for arp_uuid, arp_entry in  ofsw.ofuro_data.ArpEntry.items():
+            self.logger.info('[ARP ENTRY RESTORE]', extra=ofsw.sw_id)
+            Arp_Flow(ofsw, arp_entry, 0)
+        
+        time.sleep(1)  
+
+        ofsw.ofuro_data.NatEntry = Read_Record(ofsw, 0) # 0 = NAT
+
+        for nat_uuid, nat_entry in ofsw.ofuro_data.NatEntry.items():
             self.logger.info('[NAT ENTRY RESTORE]', extra=ofsw.sw_id)
 
-            Nat_Ready(ofsw, store_entry["ENTRY"], flag=1)
+            Nat_Ready(ofsw, nat_uuid, nat_entry["ENTRY"], flag=1)
 
         
     def unregister_ofsw(self, dp):
