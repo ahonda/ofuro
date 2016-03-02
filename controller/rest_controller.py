@@ -113,11 +113,6 @@ class RestAPIController(ControllerBase):
         else:
             return wsgi.Response(status=200, body=content_body, headers=self.headers)
 
-#        nat_entry =  ofsw.ofuro_data.NatEntry
-#        content_body = json.dumps(nat_entry, indent=4)
-#        return wsgi.Response(status=200, body=content_body, headers=self.headers)
-
-
 
     @wsgi.route('nat_get', '/nat/{dpid}/{uuid}', methods=['GET'])
     def _get_nat_entry(self, req, dpid, uuid, **kwargs):
@@ -164,8 +159,9 @@ class RestAPIController(ControllerBase):
             return wsgi.Response(status=400)
 
         try:
-            entry = Nat_Ready(ofsw, new_nat_entry)
-            content_body = json.dumps(entry, indent=4)
+            entry_uuid = Nat_Ready(ofsw, "NULL", new_nat_entry)
+            nat_entry = ofsw.ofuro_data.get_nat_entry(entry_uuid)
+            content_body = json.dumps(nat_entry, indent=4)
             return wsgi.Response(status=200, body=content_body, headers=self.headers)
 
         except:
@@ -189,10 +185,8 @@ class RestAPIController(ControllerBase):
 
         try:
             ret = Nat_Flow_Del(ofsw, uuid)
-
-            logging.info("RET FLAG : %s", ret)
-
-            content_body = json.dumps(ofsw.ofuro_data.NatEntry, indent=4)
+            nat_entry = ofsw.ofuro_data.get_nat_entry()
+            content_body = json.dumps(nat_entry, indent=4)
             return wsgi.Response(status=200, body=content_body, headers=self.headers)
 
         except:
@@ -311,6 +305,120 @@ class RestAPIController(ControllerBase):
              return wsgi.Response(status=400)
 
 
+<<<<<<< HEAD
+
+#####################################
+# REST API for ARP
+####################################      
+
+    @wsgi.route('arp_get_all', '/arp/{dpid}', methods=['GET'])
+    def _get_arp_entry_all(self, req, dpid, **kwargs):
+
+        logging.info('[REST_API : ARP ENTRY GET]  Calling')                                         
+
+        dp_id = dpid_lib.str_to_dpid(dpid)
+
+        if dp_id in  self.ofuro_spp._OFSW_LIST.keys():
+            ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
+        else:
+            logging.info('<*** ERROR ***>  OFSW Not Found')                                         
+            return wsgi.Response(status=400)
+
+        arp_entry = ofsw.ofuro_data.get_arp_entry()
+        content_body = json.dumps(arp_entry, indent=4)
+
+        if arp_entry == None:
+            logging.info('<*** ERROR ***>  ARP ENTRY : %s ' , arp_entry) 
+            return wsgi.Response(status=400, body=content_body, headers=self.headers)
+
+        else:
+            return wsgi.Response(status=200, body=content_body, headers=self.headers)
+
+
+    @wsgi.route('arp_get', '/arp/{dpid}/{uuid}', methods=['GET'])
+    def _get_arp_entry(self, req, dpid, uuid, **kwargs):
+
+        logging.info('[REST_API : ARP ENTRY GET]  UUID: %s', uuid)                                         
+
+        dp_id = dpid_lib.str_to_dpid(dpid)
+
+        if dp_id in  self.ofuro_spp._OFSW_LIST.keys():
+            ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
+        else:
+            logging.info('<*** ERROR ***>  OFSW Not Found')                                   
+            return wsgi.Response(status=400)
+
+        arp_entry = ofsw.ofuro_data.get_arp_entry(uuid)
+        content_body = json.dumps(arp_entry, indent=4)
+
+        if arp_entry == None:
+            logging.info('<*** ERROR ***>  ARP ENTRY : %s ' , arp_entry) 
+            return wsgi.Response(status=400, body=content_body, headers=self.headers)
+
+        else:
+            return wsgi.Response(status=200, body=content_body, headers=self.headers)
+
+
+
+    @wsgi.route('arp_add', '/arp/{dpid}', methods=['POST'])
+    def _add_arp_entry(self, req, dpid, **kwargs):
+
+        logging.info('[REST_API : ARP ENTRY ADD]  Calling')                                         
+
+        dp_id = dpid_lib.str_to_dpid(dpid)
+
+        if dp_id in  self.ofuro_spp._OFSW_LIST.keys():
+            ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
+        else:
+            logging.info('[** ARP ADD REQUEST : ERROR] OFSW Not Found')
+            return wsgi.Response(status=400)
+
+        new_arp_entry =eval(req.body)
+#        ret = self.check_arp_entry(ofsw, new_arp_entry)
+#        if ret != "":
+#            logging.info('[** ARP ADD REQUEST : ERROR] Same Entry Found :SW_IP %s', ret)                                         
+#            return wsgi.Response(status=400)
+
+        logging.info("ARP DATA = %s", new_arp_entry)
+        try:
+            entry = Add_Arp_Entry(ofsw, new_arp_entry)
+            content_body = json.dumps(entry, indent=4)
+            return wsgi.Response(status=200, body=content_body, headers=self.headers)
+
+        except:
+            logging.info('[** ARP ADD REQUEST : ERROR] ENTRY Can not set')                                         
+            return wsgi.Response(status=400)
+
+
+
+    @wsgi.route('arp_del', '/arp/{dpid}/{uuid}', methods=['DELETE'])
+    def _del_arp_entry(self, req, dpid, uuid, **kwargs):
+
+        logging.info('[REST_API : ARP ENTRY DELETE]  Calling')                                         
+
+        dp_id = dpid_lib.str_to_dpid(dpid)
+
+        if dp_id in  self.ofuro_spp._OFSW_LIST.keys():
+            ofsw = self.ofuro_spp._OFSW_LIST[dp_id]
+        else:
+            logging.info('<*** ERROR ***>  OFSW Not Found')                                         
+            return wsgi.Response(status=400)
+
+        try:
+            ret = Del_Arp_Entry(ofsw, uuid)
+
+            logging.info("RET FLAG : %s", ret)
+
+            content_body = json.dumps(ofsw.ofuro_data.ArpEntry, indent=4)
+            return wsgi.Response(status=200, body=content_body, headers=self.headers)
+
+        except:
+             logging.info('[** FLOW DELETE REQUEST ] bad data')                                         
+             return wsgi.Response(status=400)
+
+
+=======
+>>>>>>> 2ba359b0231d4a30fc7d83cd4c6ba0fc6d8a5b90
     def check_entry(self, ofsw, new_entry_set):
 
         chk_port = []
