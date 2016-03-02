@@ -2,7 +2,8 @@ import os
 import logging
 import pickle
 
-def Write_Record(ofsw, e_type=0):
+
+def Write_Record(ofsw, e_type=0): # e_type -> 0 : nat data ,  1 : arp data
 
     path, dump_data = check_record_file(ofsw, e_type)
 
@@ -11,7 +12,7 @@ def Write_Record(ofsw, e_type=0):
     f.close()
 
 
-def Read_Record(ofsw, e_type=0):
+def Read_Record(ofsw, e_type=0): #e_type -> 0 : nat data ,  1 : arp data
 
     path, dump_data = check_record_file(ofsw, e_type)
 
@@ -20,7 +21,7 @@ def Read_Record(ofsw, e_type=0):
     f.close()
     return dump_data
 
-def check_record_file(ofsw, e_type):
+def check_record_file(ofsw, e_type): # e_type -> 0 : nat data ,  1 : arp data
 
     if   e_type == 0:
         file_name = "nat.json"
