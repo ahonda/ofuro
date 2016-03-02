@@ -30,3 +30,13 @@ class OfuroData(object):
         else:
              ret_entry = {uuid: self.NatEntry.get(uuid, None)}
              return ret_entry
+
+
+    def get_arp_entry(self, uuid=""):
+        if uuid == "":
+            logging.info('[ALL ARP ENTRY RETURN]')
+            return self.ArpEntry
+
+        else:
+             ret_entry = {uuid: self.ArpEntry.get(uuid, None)}
+             return ret_entry

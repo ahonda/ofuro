@@ -39,10 +39,11 @@ def Nat_Ready(ofsw, ofuro_nat_set, flag=0):
             # Packet In Flow Set For ARP Packet 
             
             Arp_Flow(ofsw, arp_data, FLAG=0)
-            new_uuid = uuid.uuid4().hex
-            ofsw.ofuro_data.ArpEntry.update({new_uuid : arp_data})
+            new_arp_uuid = uuid.uuid4().hex
+            logging.info("   [NEW ARP UUID] %s ", new_arp_uuid)
+            ofsw.ofuro_data.ArpEntry.update({new_arp_uuid : arp_data})
 
-            nat_part.update({"CLIENT_MAC":"", "ARP_UUID":new_uuid})
+            nat_part.update({"CLIENT_MAC":"", "ARP_UUID":new_arp_uuid})
             nat_set.append(nat_part)
         
 

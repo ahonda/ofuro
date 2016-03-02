@@ -1,5 +1,6 @@
 import logging
 import json
+import uuid
 
 from lib.proto.pkt_proto import *
 from ryu.ofproto         import ofproto_v1_3
@@ -56,7 +57,6 @@ def Arp_Reply(ofsw, msg, header_list):
             arp_pkt_set.update({"DST_MAC": dst_mac})
             retcode = "REP"
 
-
     return retcode, arp_pkt_set
 
 
@@ -91,8 +91,35 @@ def Send_Arp(ofsw, arp_opcode, src_mac, dst_mac,
     Send_Packet_Out(ofsw, in_port, output, pkt.data, data_str=str(pkt))
 
 
+def Add_Arp_Entry(ofsw, arp_data):
 
-def Arp_Flow(ofsw, arp_data, FLAG):
+    Arp_Flow(ofsw, arp_data, FLAG=0)
+    new_uuid = uuid.uuid4().hex
+    ofsw.ofuro_data.ArpEntry.update({new_uuid : arp_data})
+
+    return {new_uuid: arp_data}
+
+
+def Del_Arp_Entry(ofsw, uuid):
+
+    arp_data = ofsw.ofuro_data.ArpEntry.get(uuid)
+    if arp_data == None:
+        return 0 # no entry
+
+    for nat_uuid, nat_entry in ofsw.ofuro_data.NatEntry.items():
+        for nat_data in nat_entry["ENTRY"]:
+            if nat_data["ARP_UUID"] == uuid:
+                logging.info("SAME!!! = %s", uuid)
+
+                return 1 # use to nat
+
+    Arp_Flow(ofsw, arp_data, FLAG=1)
+    del ofsw.ofuro_data.ArpEntry[uuid]
+
+    return 2 # complete delete
+
+
+def Arp_Flow(ofsw, arp_data, FLAG=0):
     flow_entry = {
         'priority' : PRIORITY_ARP_HANDLING ,
         'match': {
